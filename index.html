@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TashDate</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: #000; color: #fff; position: fixed; width: 100%; height: 100%; }
+  .app { max-width: 480px; margin: 0 auto; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+
+  .header { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; z-index: 50; background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%); }
+  .logo { font-size: 17px; font-weight: 700; color: #E5B769; display: flex; align-items: center; gap: 6px; font-style: italic; letter-spacing: 0.5px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); background: rgba(0,0,0,0.3); padding: 6px 14px; border-radius: 20px; backdrop-filter: blur(10px); margin: 0 auto; }
+  .header-actions { display: flex; gap: 8px; position: absolute; right: 16px; }
+  .header-actions button { background: rgba(30,30,30,0.7); backdrop-filter: blur(10px); border: none; color: #fff; font-size: 16px; cursor: pointer; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    z-index: 9999; display: flex; align-items: center; justify-content: center;
+    padding: 20px; opacity: 0; visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+  }
+  .modal-overlay.show { opacity: 1; visibility: visible; }
+  .modal-box {
+    background: #141414; border: 1px solid #222; border-radius: 24px;
+    width: 100%; max-width: 360px; padding: 28px 24px 22px;
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(229,183,105,0.1);
+    position: relative; overflow: hidden;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal-overlay.show .modal-box { transform: scale(1) translateY(0); }
+  .modal-box::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, #E5B769, transparent); opacity: 0.6;
+  }
+  .modal-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(229,183,105,0.1); display: flex; align-items: center; justify-content: center;
+    font-size: 30px; margin: 0 auto 18px; border: 1px solid rgba(229,183,105,0.2);
+  }
+  .modal-icon.warn { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.2); }
+  .modal-icon.info { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.2); }
+  .modal-title { font-size: 20px; font-weight: 700; color: #fff; text-align: center; margin-bottom: 10px; line-height: 1.3; }
+  .modal-text { font-size: 14px; color: #9ca3af; text-align: center; line-height: 1.6; margin-bottom: 22px; }
+  .modal-input {
+    width: 100%; padding: 14px 16px; background: #0a0a0a; border: 1.5px solid #222;
+    border-radius: 14px; color: #fff; font-size: 15px; outline: none;
+    font-family: inherit; margin-bottom: 12px; transition: border-color 0.3s;
+  }
+  .modal-input:focus { border-color: #E5B769; }
+  .modal-textarea {
+    width: 100%; padding: 14px 16px; background: #0a0a0a; border: 1.5px solid #222;
+    border-radius: 14px; color: #fff; font-size: 15px; outline: none;
+    font-family: inherit; margin-bottom: 12px; resize: none; min-height: 100px;
+    transition: border-color 0.3s;
+  }
+  .modal-textarea:focus { border-color: #E5B769; }
+  .modal-input-label {
+    font-size: 11px; color: #E5B769; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; display: block;
+  }
+  .modal-btns { display: flex; gap: 10px; flex-direction: column; }
+  .modal-btn {
+    width: 100%; padding: 15px; border: none; border-radius: 30px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: all 0.25s; font-family: inherit;
+  }
+  .modal-btn:active { transform: scale(0.97); }
+  .modal-btn.primary { background: #E5B769; color: #1a1a1a; box-shadow: 0 0 20px rgba(229,183,105,0.25); }
+  .modal-btn.danger { background: #ef4444; color: #fff; box-shadow: 0 0 20px rgba(239,68,68,0.25); }
+  .modal-btn.outline { background: transparent; color: #fff; border: 1.5px solid #333; }
+  .modal-btn.outline:active { background: #1a1a1a; }
+
+  .menu-modal-box {
+    background: #141414; border: 1px solid #222; border-radius: 20px;
+    width: 100%; max-width: 320px; overflow: hidden;
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  }
+  .modal-overlay.show .menu-modal-box { transform: scale(1) translateY(0); }
+  .menu-item {
+    display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+    background: none; border: none; color: #fff; font-size: 15px; font-weight: 600;
+    cursor: pointer; width: 100%; text-align: left; font-family: inherit;
+    border-bottom: 1px solid #1a1a1a; transition: background 0.2s;
+  }
+  .menu-item:last-child { border-bottom: none; }
+  .menu-item:active { background: #1a1a1a; }
+  .menu-item.danger { color: #ef4444; }
+  .menu-item .m-icon { font-size: 20px; width: 24px; text-align: center; }
+  .menu-item .m-text { flex: 1; }
+
+  .toast {
+    position: fixed; top: 80px; left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: #1a1a1a; border: 1px solid #333; border-radius: 30px;
+    padding: 12px 22px; color: #fff; font-size: 14px; font-weight: 600;
+    z-index: 10000; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    display: flex; align-items: center; gap: 8px;
+    max-width: 90vw; opacity: 0;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .toast.success { border-color: rgba(34,197,94,0.4); }
+  .toast.error { border-color: rgba(239,68,68,0.4); }
+  .toast.info { border-color: rgba(229,183,105,0.4); }
+
+  .wizard-view { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding-top: 70px; }
+  .progress-bar { display: flex; gap: 4px; padding: 10px 20px 20px; }
+  .progress-seg { flex: 1; height: 3px; background: #222; border-radius: 3px; transition: background 0.3s; }
+  .progress-seg.done, .progress-seg.active { background: #E5B769; }
+  .step-container { flex: 1; padding: 10px 28px 40px; display: flex; flex-direction: column; }
+  #stepContent { flex: 1; display: flex; flex-direction: column; animation: slideIn 0.35s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+  .step-back { background: none; border: none; color: #E5B769; font-size: 24px; cursor: pointer; padding: 0; margin-bottom: 20px; align-self: flex-start; line-height: 1; }
+  .step-title { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 8px; line-height: 1.2; }
+  .step-subtitle { font-size: 14px; color: #9ca3af; margin-bottom: 25px; font-style: italic; line-height: 1.5; }
+  .step-input { width: 100%; padding: 16px 18px; background: #111; border: 1.5px solid #222; border-radius: 14px; color: #fff; font-size: 16px; outline: none; font-family: inherit; transition: border-color 0.3s; }
+  .step-input:focus { border-color: #E5B769; }
+  .step-textarea { width: 100%; padding: 16px 18px; background: #111; border: 1.5px solid #222; border-radius: 14px; color: #fff; font-size: 16px; outline: none; font-family: inherit; resize: none; min-height: 120px; }
+  .step-textarea:focus { border-color: #E5B769; }
+  .char-count { text-align: right; font-size: 12px; color: #6b7280; margin-top: 6px; }
+
+  .option-list { display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow-y: auto; padding-right: 4px; }
+  .option-list::-webkit-scrollbar { width: 4px; }
+  .option-list::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+  .option-card { padding: 16px 20px; background: #111; border: 1.5px solid #222; border-radius: 16px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 14px; font-size: 15px; font-weight: 600; color: #fff; user-select: none; flex-shrink: 0; }
+  .option-card:active { transform: scale(0.98); }
+  .option-card.selected { border-color: #E5B769; background: rgba(229,183,105,0.1); color: #E5B769; }
+  .option-card .emoji { font-size: 22px; }
+  .option-card .check { margin-left: auto; color: #E5B769; font-size: 18px; display: none; }
+  .option-card.selected .check { display: block; }
+
+  .upload-area { border: 2px dashed #333; border-radius: 20px; padding: 35px 20px; text-align: center; cursor: pointer; background: #0a0a0a; margin-top: 10px; }
+  .upload-area:active { background: #111; }
+  .upload-area .icon { font-size: 45px; margin-bottom: 10px; }
+  .upload-area p { color: #E5B769; font-size: 14px; font-weight: 600; }
+  .upload-area small { color: #6b7280; font-size: 12px; display: block; margin-top: 6px; }
+  .upload-area input { display: none; }
+  .preview-wrap { display: none; text-align: center; margin-top: 20px; }
+  .preview-wrap img { width: 170px; height: 170px; border-radius: 50%; object-fit: cover; border: 4px solid #E5B769; box-shadow: 0 0 40px rgba(229,183,105,0.4); }
+  .preview-wrap .change-btn { display: block; margin: 15px auto 0; background: none; border: none; color: #E5B769; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+  .step-btn { width: 100%; padding: 17px; background: #E5B769; color: #1a1a1a; border: none; border-radius: 30px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: auto; transition: all 0.3s; box-shadow: 0 0 25px rgba(229,183,105,0.25); }
+  .step-btn:disabled { background: #222; color: #555; cursor: not-allowed; box-shadow: none; }
+  .step-btn:not(:disabled):active { transform: scale(0.97); }
+  .btn-outline-gold { width: 100%; padding: 16px; background: transparent; color: #E5B769; border: 1.5px solid #E5B769; border-radius: 30px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+
+  .confirm-view { padding: 80px 28px 30px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+  .confirm-card { background: #0f0f0f; border: 1px solid #1a1a1a; border-radius: 20px; padding: 22px; text-align: center; margin-bottom: 18px; }
+  .confirm-card img { width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 3px solid #E5B769; margin-bottom: 14px; }
+  .confirm-card h3 { color: #fff; font-size: 20px; margin-bottom: 6px; }
+  .confirm-card .age-badge { display: inline-block; background: rgba(229,183,105,0.15); color: #E5B769; padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+  .confirm-info { text-align: left; color: #9ca3af; font-size: 14px; line-height: 1.8; }
+  .confirm-info b { color: #E5B769; }
+  .confirm-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .confirm-tags span { background: rgba(229,183,105,0.15); color: #E5B769; padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; }
+
+  .swipe-view { flex: 1; position: relative; overflow: hidden; padding-bottom: 90px; }
+  .swipe-card { position: absolute; top: 0; left: 0; right: 0; bottom: 90px; background: #111; overflow: hidden; transition: transform 0.4s ease, opacity 0.4s ease; }
+  .swipe-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .swipe-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 30px 22px 130px; background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,0) 100%); color: #fff; }
+  .swipe-name { font-size: 30px; font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; text-shadow: 0 2px 12px rgba(0,0,0,0.7); }
+  .swipe-name .age { font-weight: 500; opacity: 0.95; }
+  .swipe-location { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; opacity: 0.9; margin-bottom: 14px; background: rgba(0,0,0,0.4); padding: 5px 12px; border-radius: 15px; backdrop-filter: blur(10px); }
+  .swipe-section-label { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: #E5B769; margin-bottom: 8px; text-transform: uppercase; }
+  .swipe-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .swipe-tag { background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); color: #fff; padding: 8px 16px; border-radius: 22px; font-size: 13px; font-weight: 600; border: 1px solid rgba(255,255,255,0.2); }
+  .swipe-about { font-size: 13px; opacity: 0.85; line-height: 1.4; max-height: 38px; overflow: hidden; margin-top: 6px; font-style: italic; }
+
+  .card-icons { position: absolute; top: 80px; left: 18px; display: flex; flex-direction: column; gap: 12px; z-index: 5; }
+  .card-icons-right { position: absolute; top: 80px; right: 18px; display: flex; flex-direction: column; gap: 12px; z-index: 5; }
+  .card-icon-btn { width: 42px; height: 42px; border-radius: 50%; background: rgba(20,20,20,0.75); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+  .card-icon-btn:active { transform: scale(0.9); }
+  .card-icon-btn.gold { background: #E5B769; color: #1a1a1a; border-color: #E5B769; }
+
+  .scroll-up-btn { position: absolute; right: 18px; bottom: 200px; width: 50px; height: 50px; border-radius: 50%; background: rgba(20,20,20,0.85); backdrop-filter: blur(10px); border: 2px solid #E5B769; color: #E5B769; font-size: 22px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center; }
+
+  .swipe-actions { position: absolute; bottom: 100px; left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 30px; z-index: 15; }
+  .action-btn { border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s, box-shadow 0.2s; font-weight: bold; }
+  .action-btn:active { transform: scale(0.9); }
+  .action-dislike { width: 62px; height: 62px; background: rgba(60,60,60,0.85); backdrop-filter: blur(10px); color: #fff; font-size: 26px; border: 1px solid rgba(255,255,255,0.15); }
+  .action-super { width: 52px; height: 52px; background: #E5B769; color: #1a1a1a; font-size: 22px; box-shadow: 0 0 25px rgba(229,183,105,0.5); }
+  .action-like { width: 62px; height: 62px; background: #ef4444; color: #fff; font-size: 26px; box-shadow: 0 0 25px rgba(239,68,68,0.4); }
+
+  .empty-state { flex: 1; padding: 100px 24px 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .empty-title { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 18px; color: #fff; max-width: 320px; }
+  .empty-subtitle { font-size: 15px; line-height: 1.5; color: #9ca3af; margin-bottom: 32px; max-width: 340px; font-style: italic; }
+  .btn-primary { width: 100%; max-width: 340px; padding: 16px; background: #E5B769; color: #1a1a1a; border: none; border-radius: 30px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 14px; box-shadow: 0 0 25px rgba(229,183,105,0.25); }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-outline { width: 100%; max-width: 340px; padding: 16px; background: transparent; color: #fff; border: 1.5px solid #333; border-radius: 30px; font-size: 15px; font-weight: 600; cursor: pointer; }
+
+  .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; background: #0a0a0a; border-top: 1px solid #1a1a1a; display: flex; justify-content: space-around; padding: 10px 0 14px; z-index: 200; }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: #6b7280; font-size: 10px; font-weight: 700; letter-spacing: 1px; cursor: pointer; padding: 5px 12px; transition: color 0.3s; text-transform: uppercase; position: relative; }
+  .nav-item.active { color: #E5B769; }
+  .nav-icon { font-size: 22px; line-height: 1; }
+  .nav-item .dot-active { width: 5px; height: 5px; background: #E5B769; border-radius: 50%; margin-top: 2px; display: none; }
+  .nav-item.active .dot-active { display: block; }
+  .nav-badge {
+    position: absolute; top: 2px; right: 8px;
+    background: #ef4444; color: #fff;
+    font-size: 9px; font-weight: 800;
+    min-width: 16px; height: 16px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 4px; border: 1.5px solid #0a0a0a;
+  }
+
+  .list-view { flex: 1; overflow-y: auto; padding: 80px 20px 100px; }
+  .section-title { font-size: 24px; font-weight: 700; margin-bottom: 20px; color: #fff; }
+  .user-list-item { display: flex; align-items: center; gap: 14px; padding: 14px; background: #0f0f0f; border: 1px solid #1a1a1a; border-radius: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s; }
+  .user-list-item:active { background: #1a1a1a; }
+  .user-list-item img { width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid #E5B769; }
+  .user-list-item .info { flex: 1; text-align: left; }
+  .user-list-item .info b { color: #fff; font-size: 15px; }
+  .user-list-item .info p { color: #9ca3af; font-size: 12px; margin-top: 3px; }
+  .user-list-item .arrow { color: #E5B769; font-size: 20px; }
+  .empty-list { color: #6b7280; text-align: center; padding: 60px 20px; font-size: 15px; }
+  .match-badge { color: #22c55e; font-size: 11px; font-weight: 700; margin-left: 4px; }
+
+  .chat-view { flex: 1; display: flex; flex-direction: column; padding-top: 70px; height: 100%; }
+  .chat-header { display: flex; align-items: center; gap: 12px; padding: 15px 20px; border-bottom: 1px solid #1a1a1a; background: #000; }
+  .chat-header img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid #E5B769; }
+  .chat-header b { color: #fff; font-size: 16px; }
+  .chat-header .status { color: #22c55e; font-size: 11px; }
+  .chat-back { background: none; border: none; color: #E5B769; font-size: 22px; cursor: pointer; padding: 0 8px 0 0; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; background: #000; }
+  .msg { max-width: 75%; padding: 11px 15px; border-radius: 18px; font-size: 14px; word-wrap: break-word; line-height: 1.4; }
+  .msg.my { align-self: flex-end; background: #E5B769; color: #1a1a1a; border-bottom-right-radius: 4px; }
+  .msg.other { align-self: flex-start; background: #1a1a1a; color: #fff; border-bottom-left-radius: 4px; }
+  .msg .time { font-size: 10px; opacity: 0.6; margin-top: 4px; }
+  .chat-input-row { display: flex; gap: 10px; padding: 12px 16px 16px; background: #0a0a0a; border-top: 1px solid #1a1a1a; }
+  .chat-input-row input { flex: 1; padding: 13px 18px; background: #111; border: 1.5px solid #222; border-radius: 25px; color: #fff; font-size: 15px; outline: none; font-family: inherit; }
+  .chat-input-row input:focus { border-color: #E5B769; }
+  .chat-input-row button { width: 48px; height: 48px; border-radius: 50%; background: #E5B769; color: #1a1a1a; border: none; font-size: 20px; cursor: pointer; font-weight: bold; }
+
+  .profile-view { padding: 80px 24px 100px; text-align: center; flex: 1; overflow-y: auto; }
+  .profile-photo-wrapper { position: relative; display: inline-block; cursor: pointer; margin-bottom: 16px; }
+  .profile-photo-wrapper img.main {
+    width: 130px; height: 130px; border-radius: 50%;
+    object-fit: cover; border: 4px solid #E5B769;
+    box-shadow: 0 0 30px rgba(229,183,105,0.3);
+    display: block; transition: transform 0.3s;
+  }
+  .profile-photo-wrapper:active img.main { transform: scale(0.96); }
+  .photo-edit-badge {
+    position: absolute; bottom: 4px; right: 4px;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: #E5B769; color: #1a1a1a;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; border: 3px solid #000;
+    box-shadow: 0 4px 12px rgba(229,183,105,0.5);
+  }
+  .photo-hint { font-size: 11px; color: #E5B769; margin-top: -8px; margin-bottom: 20px; font-weight: 600; letter-spacing: 0.5px; }
+  .info-card { background: #0f0f0f; border: 1px solid #1a1a1a; border-radius: 16px; padding: 16px; margin-bottom: 12px; text-align: left; position: relative; }
+  .info-card .label { color: #E5B769; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .info-card .value { color: #fff; font-size: 14px; line-height: 1.5; }
+  .info-card.editable { cursor: pointer; transition: all 0.3s; border-color: rgba(229,183,105,0.3); }
+  .info-card.editable:active { background: #1a1a1a; transform: scale(0.99); }
+  .info-card.editable .edit-hint { position: absolute; top: 16px; right: 16px; color: #E5B769; font-size: 16px; opacity: 0.8; }
+  .info-card.locked { opacity: 0.85; }
+  .age-badge { display: inline-block; background: rgba(229,183,105,0.15); color: #E5B769; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin: 4px 0 16px; }
+  .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tags-wrap .tag { background: rgba(229,183,105,0.15); color: #E5B769; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; }
+  .age-range-badge {
+    display: inline-block;
+    background: rgba(34,197,94,0.15);
+    color: #22c55e;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+    border: 1px solid rgba(34,197,94,0.3);
+  }
+
+  /* ============ TEST MODE — USER LIST ============ */
+  .test-user-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #0f0f0f;
+    border: 1.5px solid #1a1a1a;
+    border-radius: 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .test-user-item:active { transform: scale(0.98); background: #1a1a1a; }
+  .test-user-item.current {
+    border-color: #E5B769;
+    background: rgba(229,183,105,0.08);
+  }
+  .test-user-item img {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #E5B769;
+    flex-shrink: 0;
+  }
+  .test-user-item .t-info { flex: 1; text-align: left; min-width: 0; }
+  .test-user-item .t-info b {
+    color: #fff;
+    font-size: 14px;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .test-user-item .t-info p {
+    color: #9ca3af;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .test-user-item .t-badge {
+    font-size: 9px;
+    background: #E5B769;
+    color: #1a1a1a;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-weight: 800;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+  .test-user-item .t-arrow {
+    color: #E5B769;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .hidden { display: none !important; }
+  ::-webkit-scrollbar { width: 0; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="header" id="mainHeader">
+    <div class="logo"><span class="heart">♡</span> TashDate</div>
+    <div class="header-actions">
+      <button id="filterBtn">⌄</button>
+      <button id="menuBtn">⋮</button>
+    </div>
+  </div>
+
+  <div id="wizardView" class="wizard-view">
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="step-container"><div id="stepContent"></div></div>
+  </div>
+
+  <div id="confirmView" class="confirm-view hidden">
+    <h1 class="step-title">Ma'lumotlarni tasdiqlang</h1>
+    <p class="step-subtitle">Hammasi to'g'rimi? Tasdiqlagach akkaunt yaratiladi.</p>
+    <div id="confirmCard"></div>
+    <button class="step-btn" id="confirmBtn" style="margin-top:20px;">✓ Tasdiqlash va Akkaunt yaratish</button>
+    <button class="btn-outline-gold" id="backToWizardBtn">← Orqaga</button>
+  </div>
+
+  <div id="mainView" class="hidden" style="flex:1;display:flex;flex-direction:column;position:relative;height:100%;">
+    <div id="swipeView" class="swipe-view"></div>
+    <div id="layklarView" class="list-view hidden">
+      <h2 class="section-title">❤️ Layklar</h2>
+      <div id="layklarContent"></div>
+    </div>
+    <div id="chatlarView" class="list-view hidden">
+      <h2 class="section-title">💬 Chatlar</h2>
+      <div id="chatlarContent"></div>
+    </div>
+    <div id="profilView" class="profile-view hidden">
+      <div id="profilContent"></div>
+    </div>
+    <div id="chatWindow" class="chat-view hidden">
+      <div class="chat-header">
+        <button class="chat-back" id="chatBack">←</button>
+        <img id="chatAvatar">
+        <div><b id="chatName"></b><div class="status">● Online</div></div>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Xabar yozing...">
+        <button id="sendBtn">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav hidden" id="bottomNav">
+    <button class="nav-item active" data-tab="anketalar">
+      <span class="nav-icon">📋</span> ANKETALAR <span class="dot-active"></span>
+    </button>
+    <button class="nav-item" data-tab="layklar">
+      <span class="nav-icon">❤</span> LAYKLAR <span class="dot-active"></span>
+    </button>
+    <button class="nav-item" data-tab="chatlar">
+      <span class="nav-icon">💬</span> CHATLAR <span id="chatBadgeWrap"></span>
+      <span class="dot-active"></span>
+    </button>
+    <button class="nav-item" data-tab="profil">
+      <span class="nav-icon">👤</span> PROFIL <span class="dot-active"></span>
+    </button>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div id="modalContent"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<input type="file" id="globalPhotoInput" accept="image/*" style="display:none;">
+
+<script>
+// ============ DB ============
+const DB = {
+  users: JSON.parse(localStorage.getItem('td_users') || '[]'),
+  currentUser: JSON.parse(localStorage.getItem('td_current') || 'null'),
+  likes: JSON.parse(localStorage.getItem('td_likes') || '{}'),
+  chats: JSON.parse(localStorage.getItem('td_chats') || '{}'),
+  save() {
+    try {
+      localStorage.setItem('td_users', JSON.stringify(this.users));
+      localStorage.setItem('td_current', JSON.stringify(this.currentUser));
+      localStorage.setItem('td_likes', JSON.stringify(this.likes));
+      localStorage.setItem('td_chats', JSON.stringify(this.chats));
+    } catch (e) {
+      showToast('Rasm hajmi juda katta. Kichikroq rasm tanlang.', 'error');
+    }
+  }
+};
+
+const $ = id => document.getElementById(id);
+let currentSwipeList = [];
+let currentSwipeIdx = 0;
+let chatWithId = null;
+let currentTab = 'anketalar';
+
+// ============ MODAL SYSTEM ============
+let modalCallback = null;
+
+function openModal(html, callback = null) {
+  modalCallback = callback;
+  $('modalContent').innerHTML = html;
+  $('modalOverlay').classList.add('show');
+  bindModalEvents();
+}
+
+function closeModal() {
+  $('modalOverlay').classList.remove('show');
+  modalCallback = null;
+  $('modalContent').innerHTML = '';
+}
+
+function bindModalEvents() {
+  document.querySelectorAll('[data-modal-action]').forEach(el => {
+    el.addEventListener('click', () => {
+      const action = el.getAttribute('data-modal-action');
+      if (action === 'close') {
+        const cb = modalCallback;
+        closeModal();
+        if (cb) cb(null);
+      } else if (action === 'confirm') {
+        if (modalCallback) {
+          const result = modalCallback('confirm');
+          if (result !== false) closeModal();
+        } else closeModal();
+      } else if (action === 'cancel') {
+        const cb = modalCallback;
+        closeModal();
+        if (cb) cb('cancel');
+      } else if (action === 'submit-input') {
+        const input = $('modalInput');
+        if (input && modalCallback) {
+          const val = input.value.trim();
+          if (!val) { showToast('Iltimos, qiymat kiriting', 'error'); return; }
+          const result = modalCallback(val);
+          if (result !== false) closeModal();
+        }
+      } else if (action === 'submit-textarea') {
+        const input = $('modalTextarea');
+        if (input && modalCallback) {
+          const val = input.value.trim();
+          if (!val) { showToast('Iltimos, matn kiriting', 'error'); return; }
+          const result = modalCallback(val);
+          if (result !== false) closeModal();
+        }
+      } else if (action) {
+        const cb = modalCallback;
+        closeModal();
+        if (cb) cb(action);
+      }
+    });
+  });
+}
+
+$('modalOverlay').addEventListener('click', (e) => {
+  if (e.target === $('modalOverlay')) closeModal();
+});
+
+// ============ TOAST ============
+let toastTimeout = null;
+function showToast(message, type = 'info', duration = 2500) {
+  const t = $('toast');
+  const icons = { success: '✓', error: '✕', info: 'ℹ' };
+  t.className = 'toast ' + type;
+  t.innerHTML = `<span style="font-size:16px;">${icons[type] || 'ℹ'}</span><span>${message}</span>`;
+  t.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function showAlert(title, text, icon = 'ℹ') {
+  openModal(`
+    <div class="modal-box">
+      <div class="modal-icon info">${icon}</div>
+      <div class="modal-title">${title}</div>
+      <div class="modal-text">${text}</div>
+      <div class="modal-btns">
+        <button class="modal-btn primary" data-modal-action="close">Tushunarli</button>
+      </div>
+    </div>
+  `);
+}
+
+function showConfirm(title, text, onConfirm, options = {}) {
+  const icon = options.icon || '❓';
+  const iconClass = options.iconClass || '';
+  const confirmText = options.confirmText || 'Ha, davom etish';
+  const cancelText = options.cancelText || 'Bekor qilish';
+  const danger = options.danger || false;
+  openModal(`
+    <div class="modal-box">
+      <div class="modal-icon ${iconClass}">${icon}</div>
+      <div class="modal-title">${title}</div>
+      <div class="modal-text">${text}</div>
+      <div class="modal-btns">
+        <button class="modal-btn ${danger ? 'danger' : 'primary'}" data-modal-action="confirm">${confirmText}</button>
+        <button class="modal-btn outline" data-modal-action="cancel">${cancelText}</button>
+      </div>
+    </div>
+  `, (action) => { if (action === 'confirm') onConfirm(); });
+}
+
+function showMenu(items) {
+  openModal(`
+    <div class="menu-modal-box">
+      ${items.map(item => `
+        <button class="menu-item ${item.danger ? 'danger' : ''}" data-modal-action="${item.action}">
+          <span class="m-icon">${item.icon}</span>
+          <span class="m-text">${item.label}</span>
+          <span style="color:#555;font-size:18px;">›</span>
+        </button>
+      `).join('')}
+    </div>
+  `, (action) => {
+    const item = items.find(i => i.action === action);
+    if (item && item.onClick) setTimeout(() => item.onClick(), 150);
+  });
+}
+
+// ============ VILOYATLAR ============
+const VILOYATLAR = [
+  { name: "Toshkent shahri", emoji: "🏙" },
+  { name: "Toshkent viloyati", emoji: "🌆" },
+  { name: "Andijon", emoji: "🏞" },
+  { name: "Buxoro", emoji: "🕌" },
+  { name: "Farg'ona", emoji: "🌄" },
+  { name: "Jizzax", emoji: "🏔" },
+  { name: "Xorazm", emoji: "🏛" },
+  { name: "Namangan", emoji: "🌸" },
+  { name: "Navoiy", emoji: "⛏" },
+  { name: "Qashqadaryo", emoji: "🏜" },
+  { name: "Qoraqalpog'iston", emoji: "🐫" },
+  { name: "Samarqand", emoji: "🏛" },
+  { name: "Sirdaryo", emoji: "🌾" },
+  { name: "Surxondaryo", emoji: "🏔" }
+];
+
+let wizardData = {
+  ism: '', familiya: '', yosh: '', yil: '',
+  jinsi: '', tillar: [], ozHaqida: '', maqsad: '', rasm: '', shahar: '',
+  ageMin: 18, ageMax: 30
+};
+let currentStep = 0;
+
+// ============ STEPS ============
+const STEPS = [
+  {
+    title: "Ismingiz nima?",
+    subtitle: "Boshqa foydalanuvchilar sizni shu ism bilan ko'radi",
+    render: () => `
+      ${currentStep > 0 ? '<button class="step-back" id="backBtn">←</button>' : ''}
+      <h2 class="step-title">${STEPS[0].title}</h2>
+      <p class="step-subtitle">${STEPS[0].subtitle}</p>
+      <input type="text" class="step-input" id="inp_ism" placeholder="Ismingizni kiriting" value="${wizardData.ism}">
+      <button class="step-btn" id="nextBtn" disabled>Keyingisi →</button>
+    `,
+    setup: () => {
+      const inp = $('inp_ism'), btn = $('nextBtn');
+      const check = () => { btn.disabled = inp.value.trim().length < 2; };
+      inp.addEventListener('input', check); check(); inp.focus();
+      inp.addEventListener('keypress', e => { if (e.key === 'Enter' && !btn.disabled) { wizardData.ism = inp.value.trim(); goNext(); } });
+      btn.addEventListener('click', () => { wizardData.ism = inp.value.trim(); goNext(); });
+      bindBack();
+    }
+  },
+  {
+    title: "Familiyangiz?",
+    subtitle: "To'liq ismingizni kiriting",
+    render: () => `
+      <button class="step-back" id="backBtn">←</button>
+      <h2 class="step-title">${STEPS[1].title}</h2>
+      <p class="step-subtitle">${STEPS[1].subtitle}</p>
+      <input type="text" class="step-input" id="inp_fam" placeholder="Familiyangizni kiriting" value="${wizardData.familiya}">
+      <button class="step-btn" id="nextBtn" disabled>Keyingisi →</button>
+    `,
+    setup: () => {
+      const inp = $('inp_fam'), btn = $('nextBtn');
+      const check = () => { btn.disabled = inp.value.trim().length < 2; };
+      inp.addEventListener('input', check); check(); inp.focus();
+      inp.addEventListener('keypress', e => { if (e.key === 'Enter' && !btn.disabled) { wizardData.familiya = inp.value.trim(); goNext(); } });
+      btn.addEventListener('click', () => { wizardData.familiya = inp.value.trim(); goNext(); });
+      bindBack();
+    }
+  },
+  {
+    title: "Necha yoshdasiz?",
+    subtitle: "Faqat 16 yoshdan kattalar ro'yxatdan o'ta oladi",
+    render: () => `
+      <button class="step-back" id="backBtn">←</button>
+      <h2 class="step-title">${STEPS[2].title}</h2>
+      <p class="step-subtitle">${STEPS[2].subtitle}</p>
+      <input type="number" class="step-input" id="inp_yosh" placeholder="Masalan: 22" value="${wizardData.yosh}" min="16" max="99">
+      <button class="step-btn" id="nextBtn" disabled>Keyingisi →</button>
+    `,
+    setup: () => {
+      const inp = $('inp_yosh'), btn = $('nextBtn');
+      const check = () => { const v = +inp.value; btn.disabled = !(v >= 16 && v <= 99); };
+      inp.addEventListener('input', check); check(); inp.focus();
+      inp.addEventListener('keypress', e => { if (e.key === 'Enter' && !btn.disabled) { wizardData.yosh = +inp.value; goNext(); } });
+      btn.addEventListener('click', () => { wizardData.yosh = +inp.value; goNext(); });
+      bindBack();
+    }
+  },
+  {
+    title: "Tug'ilgan yilingiz?",
+    subtitle: "Yoshingizni tasdiqlash uchun kerak",
+    render: () => `
+      <button class="step-back" id="backBtn">←</button>
+      <h2 class="step-title">${STEPS[3].title}</h2>
+      <p class="step-subtitle">${STEPS[3].subtitle}</p>
+      <input type="number" class="step-input" id="inp_yil" placeholder="Masalan: 2000" value="${wizardData.yil}" min="1920" max="2010">
+      <button class="step-btn" id="nextBtn" disabled>Keyingisi →</button>
+    `,
+    setup: () => {
+      const inp = $('inp_yil'), btn = $('nextBtn');
+      const check = () => { const v = +inp.value; btn.disabled = !(v >= 1920 && v <= 2010); };
+      inp.addEventListener('input', check); check(); inp.focus();
+      inp.addEventListener('keypress', e => { if (e.key === 'Enter' && !btn.disabled) { wizardData.yil = inp.value; goNext(); } });
+      btn.addEventListener('click', () => { wizardData.yil = inp.value; goNext(); });
+      bindBack();
+    }
+  },
+  {
+    title: "Jinsingiz?",
+    subtitle: "Erkaklar ayollarni, ayollar erkaklarni ko'radi",
+    render: () => `
+      <button class="step-back" id="backBtn">←</button>
+      <h2 class="step-title">${STEPS[4].title}</h2>
+      <p class="step-subtitle">${STEPS[4].subtitle}</p>
+      <div class="option-list">
+        <div class="option-card ${wizardData.jinsi === 'Erkak' ? 'selected' : ''}" data-value="Erkak">
+          <span class="emoji">👨</span><span>Erkak</span><span class="check">✓</span>
+        </div>
+        <div class="option-card ${wizardData.jinsi === 'Ayol' ? 'selected' : ''}" data-value="Ayol">
+          <span class="emoji">👩</span><span>Ayol</span><span class="check">✓</span>
+        </div>
+      </div>
+      <button class="step-btn" id="nextBtn" disabled>Keyingisi →</button>
+    `,
+    setup: () => {
+      const btn = $('nextBtn');
+      const check = () => { btn.disabled = !wizardData.jinsi; };
+      document.querySelectorAll('.option-card').forEach(card => {
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          wizardData.jinsi = card.dataset.value;
+          check();
+        });
+      });
+      check();
+      btn.addEventListener('click', goNext);
+      bindBack();
+    }
+  },
+  {
+    title: "Qaysi viloyatdansiz?",
+    subtitle: "Faqat o'z viloyatingizdagi odamlarni ko'rasiz",
+    render: () => `
+      <button class="step-back" id="backBtn">←</button>
+      <h2 class="step-title">${STEPS[5].title}</h2>
+      <p class="step-subtitle">${STEPS[5].subtitle}</p>
+      <div class="option-list">
+        ${VILOYATLAR.map(v => `
+          <div class="option-card ${wizardData.shahar === v.name ? 'selected' : ''}" data-value="${v.name}">
+            <span class="emoji">${v.emoji}</span><span>${v.name}</span><span class="check">✓</span>
+          </div>
+        `).join('')}
+      </div>
+      <button class="step-btn" id="nextBtn" disabled>Keyingisi →</button>
+    `,
+    setup: () => {
+      const btn = $('nextBtn');
+      const check = () => { btn.disabled = !wizardData.shahar; };
+      document.querySelectorAll('.option-card').forEach(card => {
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          wizardData.shahar = card.dataset.value;
+          check();
+        });
+      });
+      check();
+      btn.addEventListener('click', goNext);
+      bindBack();
+    }
+  },
+  {
+    title: "Qaysi tillarda gaplashasiz?",
+    subtitle: "Bir nechta tilni tanlashingiz mumkin",
+    render: () => `
+      <button class="step-back" id="backBtn">←</button>
+      <h2 class="step-title">${STEPS[6].title}</h2>
+      <p class="step-subtitle">${STEPS[6].subtitle}</p>
+      <div class="option-list">
+        <div class="option-card ${wizardData.tillar.includes("O'zbek tili") ? 'selected' : ''}" data-value="O'zbek tili">
+          <span class="emoji">🇺🇿</span><span>O'zbek tili</span><span class="check">✓</span>
+        </div>
+        <div class="option-card ${wizardData.tillar.includes("Rus tili") ? 'selected' : ''}" data-value="Rus tili">
+          <span class="emoji">🇷🇺</span><span>Rus tili</span><span class="check">✓</span>
+        </div>
+        <div class="option-card ${wizardData.tillar.includes("Ingliz tili") ? 'selected' : ''}" data-value="Ingliz tili">
+          <span class="emoji">🇬🇧</span><span>Ingliz tili</span><span class="check">✓</span>
+        </div>
+      </div>
+      <button class="step-btn" id="nextBtn" disabled>Keyingisi →</button>
+    `,
+    setup: () => {
+      const btn = $('nextBtn');
+      const check = () => { btn.disabled = wizardData.tillar.length === 0; };
+      document.querySelectorAll('.option-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const val = card.dataset.value;
+          if (wizardData.tillar.includes(val)) {
+            wizardData.tillar = wizardData.tillar.filter(t => t !== val);
+            card.classList.remove('selected');
+          } else {
+            wizardData.tillar.push(val);
+            card.classList.add('selected');
+          }
+          check();
+        });
+      });
+      check();
+      btn.addEventListener('click', goNext);
+      bindBack();
+    }
+  },
+  {
+    title: "O'zingiz haqingizda",
+    subtitle: "Qisqacha yozing — bu sizni boshqalarga tanishtiradi",
+    render: () => `
+      <button class="step-back" id="backBtn">←</button>
+      <h2 class="step-title">${STEPS[7].title}</h2>
+      <p class="step-subtitle">${STEPS[7].subtitle}</p>
+      <textarea class="step-textarea" id="inp_about" placeholder="Masalan: Sayohat qilishni, kitob o'qishni yaxshi ko'raman..." maxlength="300">${wizardData.ozHaqida}</textarea>
+      <div class="char-count"><span id="charCount">${wizardData.ozHaqida.length}</span>/300</div>
+      <button class="step-btn" id="nextBtn" disabled>Keyingisi →</button>
+    `,
+    setup: () => {
+      const inp = $('inp_about'), btn = $('nextBtn'), cnt = $('charCount');
+      const check = () => { cnt.textContent = inp.value.length; btn.disabled = inp.value.trim().length < 10; };
+      inp.addEventListener('input', check); check(); inp.focus();
+      btn.addEventListener('click', () => { wizardData.ozHaqida = inp.value.trim(); goNext(); });
+      bindBack();
+    }
+  },
+  {
+    title: "Tanishish maqsadingiz?",
+    subtitle: "Nima uchun bu ilovaga keldingiz?",
+    render: () => `
+      <button class="step-back" id="backBtn">←</button>
+      <h2 class="step-title">${STEPS[8].title}</h2>
+      <p class="step-subtitle">${STEPS[8].subtitle}</p>
+      <div class="option-list">
+        <div class="option-card ${wizardData.maqsad === "Do'stlik" ? 'selected' : ''}" data-value="Do'stlik">
+          <span class="emoji">🤝</span><span>Do'stlik</span><span class="check">✓</span>
+        </div>
+        <div class="option-card ${wizardData.maqsad === 'Jiddiy munosabat' ? 'selected' : ''}" data-value="Jiddiy munosabat">
+          <span class="emoji">💍</span><span>Jiddiy munosabat</span><span class="check">✓</span>
+        </div>
+        <div class="option-card ${wizardData.maqsad === 'Suhbatlashish' ? 'selected' : ''}" data-value="Suhbatlashish">
+          <span class="emoji">💬</span><span>Suhbatlashish</span><span class="check">✓</span>
+        </div>
+        <div class="option-card ${wizardData.maqsad === "Sayohat" ? 'selected' : ''}" data-value="Sayohat">
+          <span class="emoji">✈️</span><span>Sayohat</span><span class="check">✓</span>
+        </div>
+      </div>
+      <button class="step-btn" id="nextBtn" disabled>Keyingisi →</button>
+    `,
+    setup: () => {
+      const btn = $('nextBtn');
+      const check = () => { btn.disabled = !wizardData.maqsad; };
+      document.querySelectorAll('.option-card').forEach(card => {
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          wizardData.maqsad = card.dataset.value;
+          check();
+        });
+      });
+      check();
+      btn.addEventListener('click', () => { if (wizardData.maqsad) goNext(); });
+      bindBack();
+    }
+  },
+  {
+    title: "Rasm yuklang",
+    subtitle: "Yuzingiz aniq ko'rinadigan rasm bo'lsin",
+    render: () => `
+      <button class="step-back" id="backBtn">←</button>
+      <h2 class="step-title">${STEPS[9].title}</h2>
+      <p class="step-subtitle">${STEPS[9].subtitle}</p>
+      <div class="upload-area" id="uploadArea">
+        <div class="icon">📷</div>
+        <p>Rasm yuklash uchun bosing</p>
+        <small>JPG, PNG • Maksimal 2MB</small>
+        <input type="file" id="rasmInput" accept="image/*">
+      </div>
+      <div class="preview-wrap" id="previewWrap">
+        <img id="rasmPreview">
+        <button class="change-btn" id="changeBtn">🔄 Boshqa rasm tanlash</button>
+      </div>
+      <button class="step-btn" id="nextBtn" disabled>Tasdiqlashga o'tish →</button>
+    `,
+    setup: () => {
+      const btn = $('nextBtn');
+      const uploadArea = $('uploadArea');
+      const fileInput = $('rasmInput');
+      const check = () => { btn.disabled = !wizardData.rasm; };
+      uploadArea.addEventListener('click', () => fileInput.click());
+      $('changeBtn').addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) { showToast('Rasm hajmi 2MB dan oshmasligi kerak!', 'error', 3500); return; }
+        const reader = new FileReader();
+        reader.onload = ev => {
+          compressImage(ev.target.result, 800, 0.85, (compressed) => {
+            wizardData.rasm = compressed;
+            $('rasmPreview').src = compressed;
+            $('previewWrap').style.display = 'block';
+            uploadArea.style.display = 'none';
+            check();
+            showToast('Rasm muvaffaqiyatli yuklandi', 'success');
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+      if (wizardData.rasm) {
+        $('rasmPreview').src = wizardData.rasm;
+        $('previewWrap').style.display = 'block';
+        uploadArea.style.display = 'none';
+      }
+      check();
+      btn.addEventListener('click', () => { if (wizardData.rasm) showConfirmCard(); });
+      bindBack();
+    }
+  }
+];
+
+function compressImage(dataUrl, maxSize, quality, callback) {
+  const img = new Image();
+  img.onload = () => {
+    let { width, height } = img;
+    if (width > height && width > maxSize) {
+      height = Math.round((height * maxSize) / width); width = maxSize;
+    } else if (height > maxSize) {
+      width = Math.round((width * maxSize) / height); height = maxSize;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, width, height);
+    callback(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.src = dataUrl;
+}
+
+const TOTAL_STEPS = STEPS.length;
+
+function buildProgressBar() {
+  const bar = $('progressBar');
+  bar.innerHTML = '';
+  for (let i = 0; i < TOTAL_STEPS; i++) {
+    const seg = document.createElement('div');
+    seg.className = 'progress-seg';
+    bar.appendChild(seg);
+  }
+}
+
+function updateProgress() {
+  document.querySelectorAll('.progress-seg').forEach((seg, i) => {
+    seg.classList.toggle('done', i < currentStep);
+    seg.classList.toggle('active', i === currentStep);
+  });
+}
+
+function renderStep() {
+  const step = STEPS[currentStep];
+  $('stepContent').innerHTML = step.render();
+  step.setup();
+  updateProgress();
+}
+
+function bindBack() {
+  const b = $('backBtn');
+  if (b) b.addEventListener('click', goPrev);
+}
+
+function goNext() { if (currentStep < TOTAL_STEPS - 1) { currentStep++; renderStep(); } }
+function goPrev() { if (currentStep > 0) { currentStep--; renderStep(); } }
+
+// ============ CONFIRM ============
+function showConfirmCard() {
+  $('wizardView').classList.add('hidden');
+  $('confirmView').classList.remove('hidden');
+  const d = wizardData;
+  $('confirmCard').innerHTML = `
+    <div class="confirm-card">
+      <img src="${d.rasm}">
+      <h3>${d.ism} ${d.familiya}</h3>
+      <div class="age-badge">${d.yosh} yosh • ${d.jinsi}</div>
+      <div class="confirm-info">
+        <div><b>Viloyat:</b> 📍 ${d.shahar || '—'}</div>
+        <div><b>Yil:</b> ${d.yil}</div>
+        <div><b>Maqsad:</b> ${d.maqsad}</div>
+        <div style="margin-top:8px;"><b>Tillar:</b>
+          <div class="confirm-tags">${d.tillar.map(t => `<span>${t}</span>`).join('')}</div>
+        </div>
+        <div style="margin-top:12px;"><b>O'zi haqida:</b><br>${d.ozHaqida}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ============ AKKAUNT YARATISH ============
+function createAccount() {
+  try {
+    wizardData.id = 'u_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    const newUser = JSON.parse(JSON.stringify(wizardData));
+    DB.users.push(newUser);
+    DB.currentUser = newUser;
+    localStorage.setItem('td_currentId', newUser.id);
+    if (!DB.likes[newUser.id]) DB.likes[newUser.id] = [];
+    DB.save();
+    openMain();
+    showToast('Akkaunt muvaffaqiyatli yaratildi! 🎉', 'success', 3000);
+  } catch (e) {
+    showToast('Xatolik yuz berdi: ' + e.message, 'error', 4000);
+  }
+}
+
+function openMain() {
+  $('wizardView').classList.add('hidden');
+  $('confirmView').classList.add('hidden');
+  $('mainView').classList.remove('hidden');
+  $('bottomNav').classList.remove('hidden');
+  updateChatBadge();
+  switchTab('anketalar');
+}
+
+function updateChatBadge() {
+  const me = DB.currentUser;
+  if (!me) return;
+  const myLikes = DB.likes[me.id] || [];
+  const matches = myLikes.filter(id => (DB.likes[id] || []).includes(me.id));
+  const wrap = $('chatBadgeWrap');
+  if (matches.length > 0) wrap.innerHTML = `<span class="nav-badge">${matches.length}</span>`;
+  else wrap.innerHTML = '';
+}
+
+// ============ BOTTOM NAV ============
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  $('swipeView').classList.toggle('hidden', tab !== 'anketalar');
+  $('layklarView').classList.toggle('hidden', tab !== 'layklar');
+  $('chatlarView').classList.toggle('hidden', tab !== 'chatlar');
+  $('profilView').classList.toggle('hidden', tab !== 'profil');
+  $('chatWindow').classList.add('hidden');
+  updateChatBadge();
+  if (tab === 'anketalar') { currentSwipeIdx = 0; renderSwipe(); }
+  if (tab === 'layklar') renderLayklar();
+  if (tab === 'chatlar') renderChatlar();
+  if (tab === 'profil') renderProfil();
+}
+
+// ============ SWIPE ============
+function getSwipeUsers() {
+  const me = DB.currentUser;
+  if (!me) return [];
+  const targetGender = me.jinsi === 'Erkak' ? 'Ayol' : 'Erkak';
+  const myLikes = DB.likes[me.id] || [];
+  const ageMin = me.ageMin || 16;
+  const ageMax = me.ageMax || 99;
+
+  return DB.users.filter(u => {
+    if (u.id === me.id) return false;
+    if (u.jinsi !== targetGender) return false;
+    if (u.shahar !== me.shahar) return false;
+    if (myLikes.includes(u.id)) return false;
+    if (u.yosh < ageMin || u.yosh > ageMax) return false;
+    return true;
+  });
+}
+
+function renderSwipe() {
+  const list = getSwipeUsers();
+  currentSwipeList = list;
+  const c = $('swipeView');
+  const me = DB.currentUser;
+  const targetGender = me.jinsi === 'Erkak' ? 'Ayol' : 'Erkak';
+  const myLikes = DB.likes[me.id] || [];
+  const ageMin = me.ageMin || 16;
+  const ageMax = me.ageMax || 99;
+
+  const totalInRegion = DB.users.filter(u =>
+    u.id !== me.id && u.jinsi === targetGender &&
+    u.shahar === me.shahar && !myLikes.includes(u.id)
+  ).length;
+
+  if (!list.length) {
+    let title, subtitle;
+    if (DB.users.length <= 1) {
+      title = "Hali boshqa foydalanuvchilar yo'q";
+      subtitle = "Siz birinchi foydalanuvchisiz. Boshqa odamlar ro'yxatdan o'tgach, ular shu yerda ko'rinadi.";
+    } else if (totalInRegion === 0) {
+      title = `${me.shahar} viloyatida hali anketalar yo'q`;
+      subtitle = `Siz ${me.shahar} viloyatidansiz. Bu viloyatdagi boshqa foydalanuvchilar ro'yxatdan o'tgach, ular shu yerda ko'rinadi.`;
+    } else {
+      title = "Yosh oralig'ingizda profil qolmadi";
+      subtitle = `${me.shahar} viloyatida ${totalInRegion} ta anketa bor, lekin ular siz tanlagan yosh oralig'ida emas. Profil bo'limida yosh oralig'ini kengaytiring.`;
+    }
+    c.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-title">${title}</div>
+        <div class="empty-subtitle">${subtitle}</div>
+        ${totalInRegion > 0 ? '<button class="btn-primary" id="expandAgeBtn">Yoshni kengaytirish</button>' : ''}
+        <button class="btn-outline" id="goLikesBtn">Layklarga o'tish</button>
+      </div>
+    `;
+    const expandBtn = $('expandAgeBtn');
+    if (expandBtn) {
+      expandBtn.addEventListener('click', () => {
+        DB.currentUser.ageMin = 16;
+        DB.currentUser.ageMax = 99;
+        const idx = DB.users.findIndex(u => u.id === DB.currentUser.id);
+        if (idx !== -1) { DB.users[idx].ageMin = 16; DB.users[idx].ageMax = 99; }
+        DB.save();
+        currentSwipeIdx = 0;
+        renderSwipe();
+        showToast('Yosh oralig\'i 16-99 ga kengaytirildi', 'success');
+      });
+    }
+    $('goLikesBtn').addEventListener('click', () => switchTab('layklar'));
+    return;
+  }
+
+  if (currentSwipeIdx >= list.length) currentSwipeIdx = 0;
+  const u = list[currentSwipeIdx];
+  const interests = [...u.tillar];
+  if (u.maqsad) interests.push(u.maqsad);
+
+  c.innerHTML = `
+    <div class="swipe-card" id="swipeCard">
+      <img src="${u.rasm}" alt="${u.ism}">
+      <div class="swipe-overlay">
+        <div class="swipe-name">${u.ism}, <span class="age">${u.yosh}</span></div>
+        <div class="swipe-location">📍 ${u.shahar}</div>
+        <div class="swipe-section-label">QIZIQISHLAR</div>
+        <div class="swipe-tags">${interests.map(t => `<span class="swipe-tag">${t}</span>`).join('')}</div>
+        <div class="swipe-about">${u.ozHaqida}</div>
+      </div>
+      <div class="card-icons">
+        <button class="card-icon-btn" id="undoBtn" title="Orqaga">↺</button>
+      </div>
+      <div class="card-icons-right">
+        <button class="card-icon-btn gold" id="boostBtn" title="Boost">⭐</button>
+        <button class="card-icon-btn warn" id="reportBtn" title="Shikoyat">⚠</button>
+      </div>
+      <button class="scroll-up-btn" id="scrollUpBtn">⌃</button>
+    </div>
+    <div class="swipe-actions">
+      <button class="action-btn action-dislike" id="dislikeBtn">✕</button>
+      <button class="action-btn action-super" id="superBtn">🎁</button>
+      <button class="action-btn action-like" id="likeBtn">❤</button>
+    </div>
+  `;
+
+  $('likeBtn').addEventListener('click', () => doLike(u.id));
+  $('dislikeBtn').addEventListener('click', () => doDislike());
+  $('superBtn').addEventListener('click', () => doLike(u.id, true));
+  $('scrollUpBtn').addEventListener('click', () => {
+    showAlert('Batafsil ma\'lumot', `${u.ism} ${u.familiya}, ${u.yosh} yosh<br><br>📍 ${u.shahar}<br><br>${u.ozHaqida}`, '👤');
+  });
+  $('undoBtn').addEventListener('click', () => {
+    if (currentSwipeIdx > 0) { currentSwipeIdx--; renderSwipe(); showToast('Orqaga qaytdingiz', 'info'); }
+    else showToast('Boshqa orqaga qaytish yo\'q', 'info');
+  });
+  $('boostBtn').addEventListener('click', () => {
+    showAlert('⭐ Boost', 'Boost funksiyasi tez orada qo\'shiladi!', '⭐');
+  });
+  $('reportBtn').addEventListener('click', () => {
+    showConfirm('Shikoyat qilish', `${u.ism} ${u.familiya} ustidan shikoyat qilmoqchimisiz?`,
+      () => showToast('Shikoyat qabul qilindi. Rahmat!', 'success'),
+      { icon: '⚠', iconClass: 'warn', confirmText: 'Ha, shikoyat qilish', danger: true }
+    );
+  });
+}
+
+function doLike(userId, isSuper = false) {
+  const me = DB.currentUser;
+  if (!DB.likes[me.id]) DB.likes[me.id] = [];
+  if (!DB.likes[me.id].includes(userId)) DB.likes[me.id].push(userId);
+  DB.save();
+
+  const otherLikes = DB.likes[userId] || [];
+  const isMatch = otherLikes.includes(me.id);
+
+  if (isMatch) {
+    const otherUser = DB.users.find(u => u.id === userId);
+    setTimeout(() => {
+      openModal(`
+        <div class="modal-box" style="text-align:center;">
+          <div style="font-size:60px;margin-bottom:10px;">💛</div>
+          <div class="modal-title" style="color:#E5B769;font-size:26px;">MATCH!</div>
+          <div class="modal-text">Siz ${otherUser.ism} bilan o'zaro laykladingiz!<br>Endi suhbatlashishingiz mumkin.</div>
+          <div style="display:flex;justify-content:center;margin-bottom:22px;">
+            <img src="${me.rasm}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #E5B769;margin-right:-15px;z-index:2;position:relative;">
+            <img src="${otherUser.rasm}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #E5B769;margin-left:-15px;">
+          </div>
+          <div class="modal-btns">
+            <button class="modal-btn primary" id="chatNowBtn">💬 Suhbatlashish</button>
+            <button class="modal-btn outline" data-modal-action="close">Keyinroq</button>
+          </div>
+        </div>
+      `);
+      setTimeout(() => {
+        const btn = $('chatNowBtn');
+        if (btn) btn.addEventListener('click', () => {
+          closeModal();
+          setTimeout(() => openChat(userId), 200);
+        });
+      }, 100);
+    }, 400);
+  } else {
+    showToast(isSuper ? '⭐ Super Like yuborildi!' : '❤️ Layk bosildi!', 'success', 1500);
+  }
+
+  updateChatBadge();
+  animateNext(isSuper ? 'super' : 'like');
+}
+
+function doDislike() { animateNext('dislike'); }
+
+function animateNext(type = 'like') {
+  const card = $('swipeCard');
+  if (card) {
+    if (type === 'like' || type === 'super') card.style.transform = 'translateX(450px) rotate(25deg)';
+    else card.style.transform = 'translateX(-450px) rotate(-25deg)';
+    card.style.opacity = '0';
+  }
+  setTimeout(() => { currentSwipeIdx++; renderSwipe(); }, 350);
+}
+
+// ============ LAYKLAR ============
+function renderLayklar() {
+  const me = DB.currentUser;
+  const myLikes = DB.likes[me.id] || [];
+  const liked = myLikes.map(id => DB.users.find(u => u.id === id)).filter(Boolean);
+  const c = $('layklarContent');
+  if (!liked.length) {
+    c.innerHTML = `
+      <div style="text-align:center;padding:60px 20px;">
+        <div style="font-size:50px;margin-bottom:14px;">❤️</div>
+        <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:8px;">Layklar yo'q</div>
+        <div style="color:#6b7280;font-size:14px;line-height:1.6;">Anketalar bo'limida kimnidir layklang.</div>
+      </div>
+    `;
+    return;
+  }
+  c.innerHTML = liked.map(u => {
+    const isMatch = (DB.likes[u.id] || []).includes(me.id);
+    return `
+      <div class="user-list-item" data-id="${u.id}">
+        <img src="${u.rasm}" style="${isMatch ? 'border-color:#22c55e;' : ''}">
+        <div class="info">
+          <b>${u.ism} ${u.familiya}${isMatch ? '<span class="match-badge">💛 Match</span>' : ''}</b>
+          <p>📍 ${u.shahar} • ${u.yosh} yosh</p>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+    `;
+  }).join('');
+  c.querySelectorAll('.user-list-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.id;
+      const isMatch = (DB.likes[id] || []).includes(me.id);
+      if (isMatch) openChat(id);
+      else {
+        const user = DB.users.find(u => u.id === id);
+        showAlert('⏳ Kuting', `${user.ism} hali sizni layklamadi.<br>U ham layklasa, chat avtomatik ochiladi.`, '⏳');
+      }
+    });
+  });
+}
+
+// ============ CHATLAR ============
+function renderChatlar() {
+  const me = DB.currentUser;
+  const myLikes = DB.likes[me.id] || [];
+  const matches = myLikes
+    .filter(id => (DB.likes[id] || []).includes(me.id))
+    .map(id => DB.users.find(u => u.id === id))
+    .filter(Boolean);
+
+  const c = $('chatlarContent');
+  if (!matches.length) {
+    c.innerHTML = `
+      <div style="text-align:center;padding:60px 20px;">
+        <div style="font-size:50px;margin-bottom:14px;">💬</div>
+        <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:8px;">Hali chatlar yo'q</div>
+        <div style="color:#6b7280;font-size:14px;line-height:1.6;">Kimnidir layklang. Agar u ham sizni layklasa,<br>chat avtomatik ochiladi.</div>
+      </div>
+    `;
+    return;
+  }
+  c.innerHTML = matches.map(u => {
+    const key = chatKey(me.id, u.id);
+    const msgs = DB.chats[key] || [];
+    const last = msgs.length ? msgs[msgs.length - 1].text : 'Suhbatni boshlang...';
+    return `
+      <div class="user-list-item" data-id="${u.id}">
+        <img src="${u.rasm}" style="border-color:#22c55e;">
+        <div class="info">
+          <b>${u.ism} ${u.familiya} <span style="color:#22c55e;font-size:11px;">●</span></b>
+          <p>${last.length > 40 ? last.slice(0,40)+'...' : last}</p>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+    `;
+  }).join('');
+  c.querySelectorAll('.user-list-item').forEach(el => {
+    el.addEventListener('click', () => openChat(el.dataset.id));
+  });
+}
+
+// ============ CHAT ============
+function chatKey(a, b) { return [a, b].sort().join('_'); }
+
+function openChat(userId) {
+  chatWithId = userId;
+  const u = DB.users.find(x => x.id === userId);
+  if (!u) return;
+  $('swipeView').classList.add('hidden');
+  $('layklarView').classList.add('hidden');
+  $('chatlarView').classList.add('hidden');
+  $('profilView').classList.add('hidden');
+  $('chatWindow').classList.remove('hidden');
+  $('chatAvatar').src = u.rasm;
+  $('chatName').textContent = `${u.ism} ${u.familiya}`;
+  renderMessages();
+}
+
+$('chatBack').addEventListener('click', () => {
+  chatWithId = null;
+  switchTab(currentTab === 'chatlar' ? 'chatlar' : 'layklar');
+});
+
+function renderMessages() {
+  const key = chatKey(DB.currentUser.id, chatWithId);
+  const msgs = DB.chats[key] || [];
+  const box = $('chatMessages');
+  if (!msgs.length) {
+    box.innerHTML = '<p class="empty-list" style="font-size:14px;">Xabarlar yo\'q. Birinchi bo\'lib yozing!</p>';
+  } else {
+    box.innerHTML = msgs.map(m => `
+      <div class="msg ${m.from === DB.currentUser.id ? 'my' : 'other'}">
+        ${escapeHtml(m.text)}
+        <div class="time">${m.time}</div>
+      </div>
+    `).join('');
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s; return d.innerHTML;
+}
+
+function sendMessage() {
+  const text = $('chatInput').value.trim();
+  if (!text || !chatWithId) return;
+  const key = chatKey(DB.currentUser.id, chatWithId);
+  if (!DB.chats[key]) DB.chats[key] = [];
+  DB.chats[key].push({
+    from: DB.currentUser.id, text,
+    time: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
+  });
+  DB.save();
+  $('chatInput').value = '';
+  renderMessages();
+}
+
+$('sendBtn').addEventListener('click', sendMessage);
+$('chatInput').addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+
+// ============ PROFIL ============
+function renderProfil() {
+  const d = DB.currentUser;
+  const ageMin = d.ageMin || 18;
+  const ageMax = d.ageMax || 30;
+  $('profilContent').innerHTML = `
+    <div class="profile-photo-wrapper" id="photoWrapper">
+      <img class="main" id="profilePhoto" src="${d.rasm}">
+      <div class="photo-edit-badge">📷</div>
+    </div>
+    <div class="photo-hint">Rasmni yangilash uchun bosing</div>
+
+    <div class="info-card editable" id="editNameCard">
+      <div class="edit-hint">✏️</div>
+      <div class="label">ISM VA FAMILIYA</div>
+      <div class="value" style="font-size:16px;font-weight:700;">${d.ism} ${d.familiya}</div>
+    </div>
+
+    <div class="info-card editable" id="editAboutCard">
+      <div class="edit-hint">✏️</div>
+      <div class="label">O'ZI HAQIDA</div>
+      <div class="value">${d.ozHaqida}</div>
+    </div>
+
+    <div style="text-align:center;margin-top:8px;">
+      <div class="age-badge">${d.yosh} yosh • ${d.jinsi}</div>
+    </div>
+
+    <div class="info-card locked">
+      <div class="label">TUG'ILGAN YIL 🔒</div>
+      <div class="value">${d.yil}</div>
+    </div>
+
+    <div class="info-card locked">
+      <div class="label">TANISHISH MAQSADI 🔒</div>
+      <div class="value">🎯 ${d.maqsad}</div>
+    </div>
+
+    <div class="info-card locked">
+      <div class="label">VILOYAT 🔒</div>
+      <div class="value">📍 ${d.shahar || '—'}</div>
+    </div>
+
+    <div class="info-card locked">
+      <div class="label">TILLAR 🔒</div>
+      <div class="tags-wrap">${d.tillar.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+    </div>
+
+    <div class="info-card editable" id="editAgeCard">
+      <div class="edit-hint">✏️</div>
+      <div class="label">YOSH ORALIG'I</div>
+      <div class="value" style="display:flex;align-items:center;gap:10px;">
+        <span class="age-range-badge">${ageMin} - ${ageMax}</span>
+        <span style="color:#6b7280;font-size:12px;">yosh</span>
+      </div>
+    </div>
+  `;
+
+  $('photoWrapper').addEventListener('click', () => {
+    showConfirm('📷 Rasmni yangilash', 'Profil rasmini yangilashni xohlaysizmi?',
+      () => $('globalPhotoInput').click(),
+      { icon: '📷', confirmText: 'Ha, rasm tanlash' }
+    );
+  });
+
+  $('editNameCard').addEventListener('click', showEditNameModal);
+  $('editAboutCard').addEventListener('click', showEditAboutModal);
+  $('editAgeCard').addEventListener('click', showEditAgeModal);
+}
+
+function showEditNameModal() {
+  const d = DB.currentUser;
+  openModal(`
+    <div class="modal-box">
+      <div class="modal-icon info">✏️</div>
+      <div class="modal-title">Ism va Familiyani tahrirlash</div>
+      <label class="modal-input-label">ISM</label>
+      <input type="text" class="modal-input" id="editIsmInput" value="${d.ism}">
+      <label class="modal-input-label">FAMILIYA</label>
+      <input type="text" class="modal-input" id="editFamInput" value="${d.familiya}">
+      <div class="modal-btns">
+        <button class="modal-btn primary" id="saveNameBtn">Saqlash</button>
+        <button class="modal-btn outline" data-modal-action="cancel">Bekor qilish</button>
+      </div>
+    </div>
+  `);
+  setTimeout(() => { const inp = $('editIsmInput'); if (inp) { inp.focus(); inp.select(); } }, 350);
+
+  $('saveNameBtn').addEventListener('click', () => {
+    const newIsm = $('editIsmInput').value.trim();
+    const newFam = $('editFamInput').value.trim();
+    if (newIsm.length < 2) { showToast('Ism kamida 2 harfdan iborat bo\'lishi kerak', 'error'); return; }
+    if (newFam.length < 2) { showToast('Familiya kamida 2 harfdan iborat bo\'lishi kerak', 'error'); return; }
+    DB.currentUser.ism = newIsm;
+    DB.currentUser.familiya = newFam;
+    const idx = DB.users.findIndex(u => u.id === DB.currentUser.id);
+    if (idx !== -1) { DB.users[idx].ism = newIsm; DB.users[idx].familiya = newFam; }
+    DB.save();
+    closeModal();
+    renderProfil();
+    showToast('Ism va Familiya yangilandi ✓', 'success');
+  });
+}
+
+function showEditAboutModal() {
+  const d = DB.currentUser;
+  openModal(`
+    <div class="modal-box">
+      <div class="modal-icon info">📝</div>
+      <div class="modal-title">O'zi haqida tahrirlash</div>
+      <label class="modal-input-label">O'ZI HAQIDA (10-300 belgi)</label>
+      <textarea class="modal-textarea" id="editAboutInput" maxlength="300">${d.ozHaqida}</textarea>
+      <div style="text-align:right;color:#6b7280;font-size:12px;margin-top:-8px;margin-bottom:12px;">
+        <span id="editAboutCount">${d.ozHaqida.length}</span>/300
+      </div>
+      <div class="modal-btns">
+        <button class="modal-btn primary" id="saveAboutBtn">Saqlash</button>
+        <button class="modal-btn outline" data-modal-action="cancel">Bekor qilish</button>
+      </div>
+    </div>
+  `);
+  setTimeout(() => {
+    const inp = $('editAboutInput'), cnt = $('editAboutCount');
+    if (inp) { inp.focus(); inp.addEventListener('input', () => { cnt.textContent = inp.value.length; }); }
+  }, 350);
+
+  $('saveAboutBtn').addEventListener('click', () => {
+    const newAbout = $('editAboutInput').value.trim();
+    if (newAbout.length < 10) { showToast('Kamida 10 belgi kiriting', 'error'); return; }
+    if (newAbout.length > 300) { showToast('300 belgidan oshmasligi kerak', 'error'); return; }
+    DB.currentUser.ozHaqida = newAbout;
+    const idx = DB.users.findIndex(u => u.id === DB.currentUser.id);
+    if (idx !== -1) DB.users[idx].ozHaqida = newAbout;
+    DB.save();
+    closeModal();
+    renderProfil();
+    showToast('O\'zi haqida yangilandi ✓', 'success');
+  });
+}
+
+function showEditAgeModal() {
+  const d = DB.currentUser;
+  const ageMin = d.ageMin || 18;
+  const ageMax = d.ageMax || 30;
+  openModal(`
+    <div class="modal-box">
+      <div class="modal-icon info">📊</div>
+      <div class="modal-title">Yosh oralig'ini tanlang</div>
+      <div class="modal-text" style="font-size:13px;margin-bottom:16px;">Sizga qaysi yoshdagi foydalanuvchilar ko'rinishini tanlang (16-99)</div>
+      <label class="modal-input-label">MINIMAL YOSH</label>
+      <input type="number" class="modal-input" id="editAgeMin" value="${ageMin}" min="16" max="99">
+      <label class="modal-input-label">MAKSIMAL YOSH</label>
+      <input type="number" class="modal-input" id="editAgeMax" value="${ageMax}" min="16" max="99">
+      <div id="ageError" style="color:#ef4444;font-size:12px;text-align:center;margin-bottom:10px;min-height:16px;"></div>
+      <div class="modal-btns">
+        <button class="modal-btn primary" id="saveAgeBtn">Saqlash</button>
+        <button class="modal-btn outline" data-modal-action="cancel">Bekor qilish</button>
+      </div>
+    </div>
+  `);
+  setTimeout(() => { const inp = $('editAgeMin'); if (inp) { inp.focus(); inp.select(); } }, 350);
+
+  $('saveAgeBtn').addEventListener('click', () => {
+    const min = parseInt($('editAgeMin').value);
+    const max = parseInt($('editAgeMax').value);
+    const err = $('ageError');
+
+    if (isNaN(min) || isNaN(max)) { err.textContent = 'Iltimos, ikkala maydonni to\'ldiring'; return; }
+    if (min < 16 || min > 99) { err.textContent = 'Minimal yosh 16-99 oralig\'ida bo\'lishi kerak'; return; }
+    if (max < 16 || max > 99) { err.textContent = 'Maksimal yosh 16-99 oralig\'ida bo\'lishi kerak'; return; }
+    if (min > max) { err.textContent = 'Minimal yosh maksimaldan kichik bo\'lishi kerak'; return; }
+
+    DB.currentUser.ageMin = min;
+    DB.currentUser.ageMax = max;
+    const idx = DB.users.findIndex(u => u.id === DB.currentUser.id);
+    if (idx !== -1) { DB.users[idx].ageMin = min; DB.users[idx].ageMax = max; }
+    DB.save();
+    closeModal();
+    renderProfil();
+    currentSwipeIdx = 0;
+    showToast(`Yosh oralig'i: ${min} - ${max}`, 'success');
+  });
+}
+
+// ============ GLOBAL RASM INPUT ============
+$('globalPhotoInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    showToast('Rasm hajmi 2MB dan oshmasligi kerak!', 'error', 3500);
+    e.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    compressImage(ev.target.result, 800, 0.85, (compressed) => {
+      DB.currentUser.rasm = compressed;
+      const idx = DB.users.findIndex(u => u.id === DB.currentUser.id);
+      if (idx !== -1) DB.users[idx].rasm = compressed;
+      DB.save();
+      renderProfil();
+      showToast('Rasm muvaffaqiyatli yangilandi ✓', 'success');
+      e.target.value = '';
+    });
+  };
+  reader.readAsDataURL(file);
+});
+
+// ============ TEST MODE — AKKAUNTNI O'CHIRISH ============
+function openTestMode() {
+  const usersHtml = DB.users.length === 0
+    ? '<div style="color:#6b7280;padding:20px;text-align:center;">Foydalanuvchilar yo\'q</div>'
+    : DB.users.map(u => {
+        const isCurrent = u.id === DB.currentUser.id;
+        return `
+          <div class="test-user-item ${isCurrent ? 'current' : ''}" data-uid="${u.id}">
+            <img src="${u.rasm}">
+            <div class="t-info">
+              <b>${u.ism} ${u.familiya}${isCurrent ? '<span class="t-badge">SIZ</span>' : ''}</b>
+              <p>${u.jinsi} • ${u.yosh} yosh • 📍 ${u.shahar}</p>
+            </div>
+            <div class="t-arrow">›</div>
+          </div>
+        `;
+      }).join('');
+
+  openModal(`
+    <div class="modal-box" style="max-width:420px;">
+      <div class="modal-icon info">🧪</div>
+      <div class="modal-title">Test Mode</div>
+      <div class="modal-text" style="font-size:13px;margin-bottom:14px;">Foydalanuvchini o'chirish uchun ustiga bosing</div>
+      <div style="max-height:340px;overflow-y:auto;margin-bottom:14px;">${usersHtml}</div>
+      <div class="modal-btns">
+        <button class="modal-btn outline" data-modal-action="close">Yopish</button>
+      </div>
+    </div>
+  `);
+
+  setTimeout(() => {
+    document.querySelectorAll('[data-uid]').forEach(el => {
+      el.addEventListener('click', () => {
+        const uid = el.dataset.uid;
+        const user = DB.users.find(u => u.id === uid);
+        if (!user) return;
+        showDeleteUserConfirm(user);
+      });
+    });
+  }, 100);
+}
+
+// ✅ Akkauntni o'chirish
+function showDeleteUserConfirm(user) {
+  const isCurrent = user.id === DB.currentUser.id;
+  const totalUsers = DB.users.length;
+
+  // ❌ Yagona akkauntni o'chirish mumkin emas
+  if (totalUsers <= 1) {
+    closeModal();
+    setTimeout(() => {
+      showAlert(
+        '⛔ O\'chirish mumkin emas',
+        'Bu yagona akkaunt. Kamida 1 ta akkaunt qolishi kerak.',
+        '⛔'
+      );
+    }, 200);
+    return;
+  }
+
+  // ❌ Hozirgi akkauntni o'chirish mumkin emas
+  if (isCurrent) {
+    closeModal();
+    setTimeout(() => {
+      showAlert(
+        '⛔ O\'chirish mumkin emas',
+        'Siz hozir shu akkauntdasiz. Boshqa akkauntni tanlang yoki avval chiqing.',
+        '⛔'
+      );
+    }, 200);
+    return;
+  }
+
+  // ✅ O'chirishni tasdiqlash
+  closeModal();
+  setTimeout(() => {
+    showConfirm(
+      '🗑 Akkauntni o\'chirish',
+      `<b style="color:#fff;">${user.ism} ${user.familiya}</b> (${user.jinsi}, ${user.yosh} yosh) akkauntini butunlay o'chirmoqchimisiz?<br><br><span style="font-size:12px;color:#ef4444;">Bu amalni qaytarib bo'lmaydi!</span>`,
+      () => {
+        // ✅ O'chirish
+        const userIndex = DB.users.findIndex(u => u.id === user.id);
+        if (userIndex === -1) return;
+
+        // 1. User'ni o'chirish
+        DB.users.splice(userIndex, 1);
+
+        // 2. Uning layklarini o'chirish
+        delete DB.likes[user.id];
+
+        // 3. Boshqalarning layklaridan uni olib tashlash
+        Object.keys(DB.likes).forEach(uid => {
+          DB.likes[uid] = (DB.likes[uid] || []).filter(id => id !== user.id);
+        });
+
+        // 4. Chatlarni o'chirish
+        const chatKeysToDelete = Object.keys(DB.chats).filter(key => key.includes(user.id));
+        chatKeysToDelete.forEach(key => delete DB.chats[key]);
+
+        // 5. Saqlash
+        DB.save();
+        updateChatBadge();
+
+        // 6. Toast xabar
+        showToast(`${user.ism} akkaunti o'chirildi`, 'success', 2500);
+
+        // 7. Test Mode'ni qayta ochish
+        setTimeout(() => {
+          if (DB.users.length > 0) {
+            openTestMode();
+          }
+        }, 500);
+
+        // 8. Agar anketalar ko'rinayotgan bo'lsa yangilash
+        if (currentTab === 'anketalar') {
+          currentSwipeIdx = 0;
+          renderSwipe();
+        } else if (currentTab === 'layklar') {
+          renderLayklar();
+        } else if (currentTab === 'chatlar') {
+          renderChatlar();
+        }
+      },
+      { icon: '🗑', iconClass: 'warn', confirmText: 'Ha, o\'chirish', danger: true, cancelText: 'Bekor qilish' }
+    );
+  }, 200);
+}
+
+// ============ MENU ============
+$('menuBtn').addEventListener('click', () => {
+  if (!DB.currentUser) { showAlert('TashDate', 'Iltimos, avval ro\'yxatdan o\'ting.', 'ℹ️'); return; }
+  showMenu([
+    { icon: '👤', label: 'Profilim', action: 'profile', onClick: () => switchTab('profil') },
+    {
+      icon: '⚙️', label: 'Sozlamalar', action: 'settings',
+      onClick: () => {
+        setTimeout(() => {
+          openModal(`
+            <div class="modal-box">
+              <div class="modal-icon info">⚙️</div>
+              <div class="modal-title">Sozlamalar</div>
+              <div style="text-align:left;color:#9ca3af;line-height:2.2;font-size:14px;margin-bottom:20px;background:#0a0a0a;padding:16px;border-radius:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a1a1a;padding-bottom:10px;margin-bottom:10px;">
+                  <span>🔔 Bildirishnomalar</span><b style="color:#22c55e;">Yoqilgan</b>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a1a1a;padding-bottom:10px;margin-bottom:10px;">
+                  <span>🌙 Tungi rejim</span><b style="color:#22c55e;">Yoqilgan</b>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <span>🌍 Til</span><b style="color:#E5B769;">O'zbek</b>
+                </div>
+              </div>
+              <div class="modal-btns"><button class="modal-btn primary" data-modal-action="close">Tushunarli</button></div>
+            </div>
+          `);
+        }, 100);
+      }
+    },
+    {
+      icon: '🧪', label: 'Test Mode', action: 'testmode',
+      onClick: () => {
+        setTimeout(() => openTestMode(), 100);
+      }
+    },
+    {
+      icon: 'ℹ️', label: 'Ilova haqida', action: 'about',
+      onClick: () => {
+        setTimeout(() => {
+          openModal(`
+            <div class="modal-box">
+              <div class="modal-icon" style="background:rgba(229,183,105,0.15);border-color:rgba(229,183,105,0.3);font-size:34px;color:#E5B769;">♡</div>
+              <div class="modal-title" style="color:#E5B769;font-style:italic;">TashDate</div>
+              <div style="text-align:center;color:#9ca3af;font-size:13px;margin-bottom:18px;">O'zbekistondagi zamonaviy tanishuv ilovasi</div>
+              <div style="background:#0a0a0a;padding:16px;border-radius:14px;margin-bottom:16px;color:#9ca3af;font-size:14px;line-height:2;">
+                <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1a1a1a;padding-bottom:8px;margin-bottom:8px;">
+                  <span>📦 Versiya</span><b style="color:#fff;">1.0.0</b>
+                </div>
+                <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1a1a1a;padding-bottom:8px;margin-bottom:8px;">
+                  <span>👥 Foydalanuvchilar</span><b style="color:#fff;">${DB.users.length}</b>
+                </div>
+                <div style="display:flex;justify-content:space-between;">
+                  <span>📅 Chiqarilgan</span><b style="color:#fff;">2024</b>
+                </div>
+              </div>
+              <div class="modal-btns"><button class="modal-btn primary" data-modal-action="close">Yopish</button></div>
+            </div>
+          `);
+        }, 100);
+      }
+    },
+    {
+      icon: '🚪', label: 'Hisobdan chiqish', action: 'logout', danger: true,
+      onClick: () => {
+        setTimeout(() => {
+          showConfirm('Hisobdan chiqish', 'Rostdan ham hisobingizdan chiqmoqchimisiz?',
+            () => {
+              DB.currentUser = null;
+              localStorage.removeItem('td_current');
+              localStorage.removeItem('td_currentId');
+              location.reload();
+            },
+            { icon: '🚪', confirmText: 'Ha, chiqish', danger: true }
+          );
+        }, 100);
+      }
+    }
+  ]);
+});
+
+$('filterBtn').addEventListener('click', () => {
+  if (!DB.currentUser) return;
+  showEditAgeModal();
+});
+
+// ============ INIT ============
+function init() {
+  buildProgressBar();
+  const confirmBtn = $('confirmBtn');
+  if (confirmBtn) confirmBtn.addEventListener('click', createAccount);
+  const backBtn = $('backToWizardBtn');
+  if (backBtn) backBtn.addEventListener('click', () => {
+    $('confirmView').classList.add('hidden');
+    $('wizardView').classList.remove('hidden');
+    currentStep = TOTAL_STEPS - 1;
+    renderStep();
+  });
+
+  let currentUser = DB.currentUser;
+  if (!currentUser) {
+    const savedId = localStorage.getItem('td_currentId');
+    if (savedId) {
+      const found = DB.users.find(u => u.id === savedId);
+      if (found) { currentUser = found; DB.currentUser = found; DB.save(); }
+    }
+  }
+  if (currentUser) {
+    if (typeof currentUser.ageMin !== 'number') currentUser.ageMin = 18;
+    if (typeof currentUser.ageMax !== 'number') currentUser.ageMax = 30;
+    DB.save();
+  }
+  if (currentUser && currentUser.id) openMain();
+  else renderStep();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+window.goNext = goNext;
+window.goPrev = goPrev;
+</script>
+</body>
+</html>
